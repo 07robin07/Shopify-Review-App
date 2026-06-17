@@ -1,0 +1,734 @@
+{% comment %}
+  Reviews Widget - Theme App Extension v2
+  Features: Reviews, Q&A, Rich Snippets, Photo Reviews, Social Share
+{% endcomment %}
+
+{{ 'reviews-widget.css' | asset_url | stylesheet_tag }}
+
+{% if product != blank %}
+<!-- JSON-LD Rich Snippets for SEO -->
+<script type="application/ld+json" id="review-jsonld">
+{
+  "@context": "https://schema.org/",
+  "@type": "Product",
+  "name": {{ product.title | json }},
+  "image": {{ product.featured_image | json }},
+  "description": {{ product.description | strip_html | truncate: 200 | json }},
+  "sku": {{ product.selected_or_first_available_variant.sku | json }},
+  "brand": {
+    "@type": "Brand",
+    "name": {{ product.vendor | json }}
+  },
+  "offers": {
+    "@type": "Offer",
+    "url": {{ request.origin | append: product.url | json }},
+    "priceCurrency": {{ cart.currency.iso_code | json }},
+    "price": {{ product.selected_or_first_available_variant.price | divided_by: 100.0 | json }},
+    "availability": "https://schema.org/{% if product.selected_or_first_available_variant.available %}InStock{% else %}OutOfStock{% endif %}"
+  },
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "0",
+    "reviewCount": "0"
+  }
+}
+</script>
+{% endif %}
+
+<div id="shopify-reviews-widget" data-product-id="{{ product.id }}" data-product-title="{{ product.title | escape }}" data-product-handle="{{ product.handle }}" data-product-image="{{ product.featured_image | img_url: 'medium' }}" data-shop="{{ shop.permanent_domain }}">
+
+  <!-- Rating Summary (for collection pages) -->
+  <div class="srw-rating-summary" id="rating-summary" style="display:none">
+    <span class="srw-stars" id="summary-stars"></span>
+    <span class="srw-rating-count" id="summary-count"></span>
+  </div>
+
+  <!-- Main Widget -->
+  <div class="srw-container">
+    <div class="srw-header">
+      <h2 class="srw-title">Customer Reviews</h2>
+      <div class="srw-summary">
+        <div class="srw-average">
+          <span class="srw-stars-large" id="average-stars">☆☆☆☆☆</span>
+          <span class="srw-average-number" id="average-number">0.0</span>
+          <span class="srw-total-reviews" id="total-reviews">Based on 0 reviews</span>
+        </div>
+        <button class="srw-write-btn" id="write-review-btn">Write a Review</button>
+      </div>
+    </div>
+
+    <!-- Rating Breakdown -->
+    <div class="srw-breakdown" id="rating-breakdown"></div>
+
+    <!-- Filters -->
+    <div class="srw-filters">
+      <div class="srw-filter-group">
+        <select id="sort-reviews" class="srw-select">
+          <option value="newest">Newest First</option>
+          <option value="highest">Highest Rated</option>
+          <option value="lowest">Lowest Rated</option>
+          <option value="helpful">Most Helpful</option>
+          <option value="verified">Verified Only</option>
+        </select>
+        <select id="filter-rating" class="srw-select">
+          <option value="all">All Ratings</option>
+          <option value="5">5 Stars</option>
+          <option value="4">4 Stars</option>
+          <option value="3">3 Stars</option>
+          <option value="2">2 Stars</option>
+          <option value="1">1 Star</option>
+        </select>
+        <select id="filter-media" class="srw-select">
+          <option value="all">All Reviews</option>
+          <option value="photos">With Photos</option>
+          <option value="videos">With Videos</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Reviews List -->
+    <div class="srw-list" id="reviews-list">
+      <div class="srw-loading">
+        <div class="srw-spinner"></div>
+        <p>Loading reviews...</p>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="srw-pagination" id="reviews-pagination"></div>
+  </div>
+
+  <!-- Q&A Section -->
+  <div class="srw-qna-section" id="qna-section" style="display:none">
+    <div class="srw-qna-header">
+      <h3>Questions & Answers</h3>
+      <button class="srw-write-btn srw-btn-sm" id="ask-question-btn">Ask a Question</button>
+    </div>
+    <div class="srw-qna-list" id="qna-list"></div>
+  </div>
+</div>
+
+<!-- Review Modal -->
+<div id="srw-review-modal" class="srw-modal">
+  <div class="srw-modal-content">
+    <span class="srw-close">&times;</span>
+    <h3>Write a Review</h3>
+    <div class="srw-product-preview" id="modal-product-preview">
+      <img src="" alt="" id="modal-product-img">
+      <span id="modal-product-title"></span>
+    </div>
+    <form id="review-form">
+      <div class="srw-form-group">
+        <label>Rating *</label>
+        <div class="srw-star-input">
+          <input type="radio" name="rating" value="5" id="srw-star5" required><label for="srw-star5">★</label>
+          <input type="radio" name="rating" value="4" id="srw-star4"><label for="srw-star4">★</label>
+          <input type="radio" name="rating" value="3" id="srw-star3"><label for="srw-star3">★</label>
+          <input type="radio" name="rating" value="2" id="srw-star2"><label for="srw-star2">★</label>
+          <input type="radio" name="rating" value="1" id="srw-star1"><label for="srw-star1">★</label>
+        </div>
+      </div>
+
+      <div class="srw-form-group">
+        <label>Review Title</label>
+        <input type="text" name="title" placeholder="Summarize your experience">
+      </div>
+
+      <div class="srw-form-group">
+        <label>Review *</label>
+        <textarea name="body" required rows="4" placeholder="What did you like or dislike? How was the fit and quality?"></textarea>
+        <span class="srw-char-count" id="char-count">0 characters</span>
+      </div>
+
+      <!-- Review Attributes -->
+      <div class="srw-form-group" id="review-attributes">
+        <label>How would you rate the fit?</label>
+        <div class="srw-attribute-options">
+          <button type="button" class="srw-attr-btn" data-attr="fit" data-value="runs_small">Runs Small</button>
+          <button type="button" class="srw-attr-btn srw-attr-selected" data-attr="fit" data-value="true_to_size">True to Size</button>
+          <button type="button" class="srw-attr-btn" data-attr="fit" data-value="runs_large">Runs Large</button>
+        </div>
+      </div>
+
+      <div class="srw-form-row">
+        <div class="srw-form-group">
+          <label>Name *</label>
+          <input type="text" name="customerName" required placeholder="Your name">
+        </div>
+        <div class="srw-form-group">
+          <label>Email *</label>
+          <input type="email" name="customerEmail" required placeholder="your@email.com">
+        </div>
+      </div>
+
+      <div class="srw-form-group">
+        <label>Photos (optional, max 5)</label>
+        <div class="srw-upload-area" id="upload-area">
+          <input type="file" name="photos" multiple accept="image/*" id="photo-input" style="display:none">
+          <div class="srw-upload-placeholder" onclick="document.getElementById('photo-input').click()">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <p>Click to upload photos</p>
+          </div>
+          <div class="srw-photo-preview" id="photo-preview"></div>
+        </div>
+      </div>
+
+      <div class="srw-form-group">
+        <label class="srw-checkbox-label">
+          <input type="checkbox" name="verified" id="verified-check">
+          I purchased this product
+        </label>
+      </div>
+
+      <button type="submit" class="srw-submit-btn">Submit Review</button>
+      <p class="srw-form-note">By submitting, you agree to our Terms of Service and Privacy Policy</p>
+    </form>
+  </div>
+</div>
+
+<!-- Question Modal -->
+<div id="srw-qna-modal" class="srw-modal">
+  <div class="srw-modal-content srw-modal-sm">
+    <span class="srw-close">&times;</span>
+    <h3>Ask a Question</h3>
+    <form id="question-form">
+      <div class="srw-form-group">
+        <label>Your Question *</label>
+        <textarea name="question" required rows="3" placeholder="What would you like to know about this product?"></textarea>
+      </div>
+      <div class="srw-form-row">
+        <div class="srw-form-group">
+          <label>Name *</label>
+          <input type="text" name="customerName" required placeholder="Your name">
+        </div>
+        <div class="srw-form-group">
+          <label>Email *</label>
+          <input type="email" name="customerEmail" required placeholder="your@email.com">
+        </div>
+      </div>
+      <button type="submit" class="srw-submit-btn">Submit Question</button>
+    </form>
+  </div>
+</div>
+
+<!-- Photo Lightbox -->
+<div id="srw-lightbox" class="srw-lightbox">
+  <span class="srw-lightbox-close">&times;</span>
+  <img src="" alt="" id="srw-lightbox-img">
+  <div class="srw-lightbox-nav">
+    <button class="srw-lightbox-prev">‹</button>
+    <button class="srw-lightbox-next">›</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  const API_URL = window.location.protocol + '//' + window.location.host + '/api';
+  const container = document.getElementById('shopify-reviews-widget');
+  const productId = container.dataset.productId;
+  const productTitle = container.dataset.productTitle;
+  const productHandle = container.dataset.productHandle;
+  const productImage = container.dataset.productImage;
+  const shop = container.dataset.shop;
+  let currentPage = 1;
+  let currentSort = 'newest';
+  let currentFilter = 'all';
+  let currentMedia = 'all';
+  let reviewStats = null;
+  let uploadedPhotos = [];
+  let lightboxPhotos = [];
+  let lightboxIndex = 0;
+
+  // Initialize
+  async function init() {
+    await loadReviews(1, 'newest');
+    await loadQnA();
+    setupEventListeners();
+  }
+
+  async function loadReviews(page, sort, filter, media) {
+    currentPage = page || 1;
+    currentSort = sort || currentSort;
+    currentFilter = filter || currentFilter;
+    currentMedia = media || currentMedia;
+
+    const list = document.getElementById('reviews-list');
+    list.innerHTML = '<div class="srw-loading"><div class="srw-spinner"></div><p>Loading reviews...</p></div>';
+
+    try {
+      const url = `${API_URL}/reviews/product/${productId}?shop=${shop}&page=${currentPage}&sort=${currentSort}&limit=10`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      reviewStats = data.stats;
+      renderSummary(data.stats);
+      renderBreakdown(data.stats);
+      renderReviews(data.reviews);
+      renderPagination(data.pagination);
+      updateRichSnippets(data.stats);
+    } catch (err) {
+      list.innerHTML = '<div class="srw-error"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Unable to load reviews. Please try again later.</p></div>';
+    }
+  }
+
+  function renderSummary(stats) {
+    const avg = stats?.average || 0;
+    const total = stats?.total || 0;
+    const filled = Math.round(avg);
+
+    document.getElementById('average-stars').textContent = '★'.repeat(filled) + '☆'.repeat(5 - filled);
+    document.getElementById('average-number').textContent = avg.toFixed(1);
+    document.getElementById('total-reviews').textContent = `Based on ${total} review${total !== 1 ? 's' : ''}`;
+
+    // Update summary badge (for collection pages)
+    const summary = document.getElementById('rating-summary');
+    if (summary && total > 0) {
+      summary.style.display = 'inline-flex';
+      document.getElementById('summary-stars').textContent = '★'.repeat(filled) + '☆'.repeat(5 - filled);
+      document.getElementById('summary-count').textContent = `(${total})`;
+    }
+  }
+
+  function renderBreakdown(stats) {
+    if (!stats?.breakdown) return;
+    const total = stats.total || 1;
+    const breakdown = document.getElementById('rating-breakdown');
+
+    breakdown.innerHTML = [5,4,3,2,1].map(r => {
+      const count = stats.breakdown[r] || 0;
+      const pct = (count / total * 100).toFixed(1);
+      return `
+        <div class="srw-breakdown-row" onclick="filterByRating(${r})">
+          <span class="srw-breakdown-label">${r} star${r !== 1 ? 's' : ''}</span>
+          <div class="srw-breakdown-bar"><div class="srw-breakdown-fill" style="width:${pct}%"></div></div>
+          <span class="srw-breakdown-count">${count}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderReviews(reviews) {
+    const list = document.getElementById('reviews-list');
+
+    if (!reviews || reviews.length === 0) {
+      list.innerHTML = `
+        <div class="srw-empty">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+          <h3>No reviews yet</h3>
+          <p>Be the first to review this product!</p>
+        </div>`;
+      return;
+    }
+
+    list.innerHTML = reviews.map((review, idx) => {
+      lightboxPhotos = [];
+      return `
+      <div class="srw-review" data-id="${review.id}">
+        <div class="srw-review-header">
+          <div class="srw-reviewer">
+            <div class="srw-avatar">${review.customerName.charAt(0).toUpperCase()}</div>
+            <div class="srw-reviewer-info">
+              <strong>${review.customerName}</strong>
+              ${review.isVerified ? '<span class="srw-verified">✓ Verified Purchase</span>' : ''}
+              ${review.featured ? '<span class="srw-featured">★ Featured</span>' : ''}
+            </div>
+          </div>
+          <div class="srw-review-rating">
+            <span class="srw-stars">${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}</span>
+            <span class="srw-review-date">${formatDate(review.createdAt)}</span>
+          </div>
+        </div>
+        ${review.title ? `<div class="srw-review-title">${review.title}</div>` : ''}
+        <div class="srw-review-body">${review.body}</div>
+        ${review.attributes ? renderAttributes(review.attributes) : ''}
+        ${review.photos && review.photos.length ? `
+          <div class="srw-review-photos">
+            ${review.photos.map((photo, pidx) => `<img src="${photo}" alt="Review photo" loading="lazy" onclick="openLightbox(${idx}, ${pidx})">`).join('')}
+          </div>
+        ` : ''}
+        <div class="srw-review-footer">
+          <div class="srw-review-actions">
+            <button class="srw-helpful-btn" onclick="markHelpful('${review.id}', true, this)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"/></svg>
+              Helpful (${review.helpfulCount})
+            </button>
+            <button class="srw-helpful-btn" onclick="markHelpful('${review.id}', false, this)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3zm7-13h3a2 2 0 012 2v7a2 2 0 01-2 2h-3"/></svg>
+              Not Helpful (${review.notHelpfulCount})
+            </button>
+          </div>
+          <div class="srw-share-btns">
+            <button class="srw-share-btn" onclick="shareReview('${review.id}', 'facebook')">Share</button>
+          </div>
+        </div>
+        ${review.reply ? `
+          <div class="srw-merchant-reply">
+            <div class="srw-reply-header">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              <strong>Merchant Response</strong>
+              <span>${review.replyDate ? formatDate(review.replyDate) : ''}</span>
+            </div>
+            <p>${review.reply}</p>
+          </div>
+        ` : ''}
+      </div>
+    `}).join('');
+  }
+
+  function renderAttributes(attrs) {
+    if (!attrs) return '';
+    let html = '<div class="srw-attributes">';
+    for (const [key, value] of Object.entries(attrs)) {
+      html += `<span class="srw-attribute"><strong>${key}:</strong> ${value}</span>`;
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderPagination(pagination) {
+    const container = document.getElementById('reviews-pagination');
+    if (!pagination || pagination.pages <= 1) {
+      container.innerHTML = '';
+      return;
+    }
+
+    let html = '';
+    if (pagination.page > 1) html += `<button class="srw-page-btn" onclick="loadReviews(${pagination.page - 1}, '${currentSort}')">‹ Prev</button>`;
+
+    for (let i = 1; i <= pagination.pages; i++) {
+      if (i === 1 || i === pagination.pages || (i >= pagination.page - 1 && i <= pagination.page + 1)) {
+        html += `<button class="srw-page-btn ${i === pagination.page ? 'active' : ''}" onclick="loadReviews(${i}, '${currentSort}')">${i}</button>`;
+      } else if (i === pagination.page - 2 || i === pagination.page + 2) {
+        html += `<span class="srw-page-ellipsis">...</span>`;
+      }
+    }
+
+    if (pagination.page < pagination.pages) html += `<button class="srw-page-btn" onclick="loadReviews(${pagination.page + 1}, '${currentSort}')">Next ›</button>`;
+
+    container.innerHTML = html;
+  }
+
+  async function loadQnA() {
+    try {
+      const res = await fetch(`${API_URL}/qna/product/${productId}?shop=${shop}`);
+      const data = await res.json();
+
+      if (data.questions && data.questions.length > 0) {
+        document.getElementById('qna-section').style.display = 'block';
+        document.getElementById('qna-list').innerHTML = data.questions.map(q => `
+          <div class="srw-qna-item">
+            <div class="srw-question">
+              <span class="srw-q-badge">Q</span>
+              <div class="srw-q-content">
+                <p>${q.question}</p>
+                <span class="srw-q-meta">${q.customerName} • ${formatDate(q.createdAt)}</span>
+              </div>
+            </div>
+            ${q.answer ? `
+              <div class="srw-answer">
+                <span class="srw-a-badge">A</span>
+                <div class="srw-a-content">
+                  <p>${q.answer}</p>
+                  <span class="srw-a-meta">${q.answeredBy || 'Merchant'} • ${q.answerDate ? formatDate(q.answerDate) : ''}</span>
+                </div>
+              </div>
+            ` : '<div class="srw-no-answer">Awaiting merchant response</div>'}
+          </div>
+        `).join('');
+      }
+    } catch (e) { console.error('QnA error:', e); }
+  }
+
+  function updateRichSnippets(stats) {
+    if (!stats || stats.total === 0) return;
+    const jsonld = document.getElementById('review-jsonld');
+    if (!jsonld) return;
+
+    try {
+      const data = JSON.parse(jsonld.textContent);
+      data.aggregateRating = {
+        "@type": "AggregateRating",
+        "ratingValue": stats.average.toFixed(1),
+        "reviewCount": stats.total.toString(),
+        "bestRating": "5",
+        "worstRating": "1"
+      };
+      jsonld.textContent = JSON.stringify(data, null, 2);
+    } catch (e) { console.error('JSON-LD error:', e); }
+  }
+
+  function setupEventListeners() {
+    // Review modal
+    const modal = document.getElementById('srw-review-modal');
+    document.getElementById('write-review-btn').addEventListener('click', () => {
+      document.getElementById('modal-product-img').src = productImage;
+      document.getElementById('modal-product-title').textContent = productTitle;
+      modal.style.display = 'block';
+      document.body.style.overflow = 'hidden';
+    });
+
+    modal.querySelector('.srw-close').addEventListener('click', () => closeModal(modal));
+
+    // QnA modal
+    const qnaModal = document.getElementById('srw-qna-modal');
+    document.getElementById('ask-question-btn').addEventListener('click', () => {
+      qnaModal.style.display = 'block';
+      document.body.style.overflow = 'hidden';
+    });
+    qnaModal.querySelector('.srw-close').addEventListener('click', () => closeModal(qnaModal));
+
+    // Sort & filter
+    document.getElementById('sort-reviews').addEventListener('change', (e) => loadReviews(1, e.target.value));
+    document.getElementById('filter-rating').addEventListener('change', (e) => loadReviews(1, currentSort, e.target.value));
+    document.getElementById('filter-media').addEventListener('change', (e) => loadReviews(1, currentSort, currentFilter, e.target.value));
+
+    // Photo upload
+    const photoInput = document.getElementById('photo-input');
+    photoInput.addEventListener('change', handlePhotoUpload);
+
+    // Review form
+    document.getElementById('review-form').addEventListener('submit', submitReview);
+    document.getElementById('question-form').addEventListener('submit', submitQuestion);
+
+    // Character count
+    document.querySelector('textarea[name="body"]').addEventListener('input', (e) => {
+      document.getElementById('char-count').textContent = `${e.target.value.length} characters`;
+    });
+
+    // Attribute buttons
+    document.querySelectorAll('.srw-attr-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const attr = btn.dataset.attr;
+        document.querySelectorAll(`.srw-attr-btn[data-attr="${attr}"]`).forEach(b => b.classList.remove('srw-attr-selected'));
+        btn.classList.add('srw-attr-selected');
+      });
+    });
+
+    // Lightbox
+    document.querySelector('.srw-lightbox-close').addEventListener('click', closeLightbox);
+    document.querySelector('.srw-lightbox-prev').addEventListener('click', () => navigateLightbox(-1));
+    document.querySelector('.srw-lightbox-next').addEventListener('click', () => navigateLightbox(1));
+
+    // Close modals on outside click
+    [modal, qnaModal].forEach(m => {
+      m.addEventListener('click', (e) => { if (e.target === m) closeModal(m); });
+    });
+
+    document.getElementById('srw-lightbox').addEventListener('click', (e) => {
+      if (e.target.id === 'srw-lightbox') closeLightbox();
+    });
+  }
+
+  function closeModal(modal) {
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  function handlePhotoUpload(e) {
+    const files = Array.from(e.target.files);
+    const preview = document.getElementById('photo-preview');
+    const maxPhotos = 5;
+
+    if (uploadedPhotos.length + files.length > maxPhotos) {
+      alert(`Maximum ${maxPhotos} photos allowed`);
+      return;
+    }
+
+    files.forEach(file => {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Photo must be less than 5MB');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        uploadedPhotos.push({ file, dataUrl: e.target.result });
+        renderPhotoPreview();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function renderPhotoPreview() {
+    const preview = document.getElementById('photo-preview');
+    preview.innerHTML = uploadedPhotos.map((photo, idx) => `
+      <div class="srw-photo-thumb">
+        <img src="${photo.dataUrl}" alt="">
+        <button type="button" class="srw-photo-remove" onclick="removePhoto(${idx})">×</button>
+      </div>
+    `).join('');
+
+    if (uploadedPhotos.length >= 5) {
+      document.querySelector('.srw-upload-placeholder').style.display = 'none';
+    }
+  }
+
+  function removePhoto(idx) {
+    uploadedPhotos.splice(idx, 1);
+    renderPhotoPreview();
+    document.querySelector('.srw-upload-placeholder').style.display = 'flex';
+  }
+
+  async function submitReview(e) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+
+    // Collect attributes
+    const attributes = {};
+    document.querySelectorAll('.srw-attr-btn.srw-attr-selected').forEach(btn => {
+      attributes[btn.dataset.attr] = btn.dataset.value;
+    });
+
+    const reviewData = {
+      shop,
+      productId,
+      productTitle,
+      productHandle,
+      productImage,
+      customerName: formData.get('customerName'),
+      customerEmail: formData.get('customerEmail'),
+      rating: parseInt(formData.get('rating')),
+      title: formData.get('title'),
+      body: formData.get('body'),
+      photos: uploadedPhotos.map(p => p.dataUrl),
+      attributes,
+      isVerified: document.getElementById('verified-check').checked
+    };
+
+    try {
+      const res = await fetch(`${API_URL}/reviews/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reviewData)
+      });
+
+      if (res.ok) {
+        closeModal(document.getElementById('srw-review-modal'));
+        e.target.reset();
+        uploadedPhotos = [];
+        renderPhotoPreview();
+        document.querySelector('.srw-upload-placeholder').style.display = 'flex';
+        currentPage = 1;
+        loadReviews(1, 'newest');
+        showNotification('Thank you! Your review has been submitted.', 'success');
+      } else {
+        showNotification('Failed to submit review. Please try again.', 'error');
+      }
+    } catch (err) {
+      showNotification('Network error. Please try again.', 'error');
+    }
+  }
+
+  async function submitQuestion(e) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+
+    const questionData = {
+      shop,
+      productId,
+      productTitle,
+      customerName: formData.get('customerName'),
+      customerEmail: formData.get('customerEmail'),
+      question: formData.get('question')
+    };
+
+    try {
+      const res = await fetch(`${API_URL}/qna/ask`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(questionData)
+      });
+
+      if (res.ok) {
+        closeModal(document.getElementById('srw-qna-modal'));
+        e.target.reset();
+        showNotification('Question submitted! We'll notify you when answered.', 'success');
+        loadQnA();
+      }
+    } catch (err) {
+      showNotification('Failed to submit question.', 'error');
+    }
+  }
+
+  async function markHelpful(reviewId, isHelpful, btn) {
+    try {
+      const res = await fetch(`${API_URL}/reviews/${reviewId}/helpful`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: isHelpful ? 'increment' : 'decrement' })
+      });
+
+      if (res.ok) {
+        btn.classList.add('srw-voted');
+        btn.disabled = true;
+        const match = btn.textContent.match(/\d+/);
+        const count = match ? parseInt(match[0]) + 1 : 1;
+        btn.innerHTML = btn.innerHTML.replace(/\(\d+\)/, `(${count})`);
+      }
+    } catch (err) { console.error('Helpful error:', err); }
+  }
+
+  function shareReview(reviewId, platform) {
+    const url = window.location.href;
+    const text = `Check out this review for ${productTitle}`;
+
+    const shareUrls = {
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+      twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
+      pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(url)}&description=${encodeURIComponent(text)}`
+    };
+
+    if (shareUrls[platform]) {
+      window.open(shareUrls[platform], '_blank', 'width=600,height=400');
+    }
+  }
+
+  function openLightbox(reviewIdx, photoIdx) {
+    // This would need proper implementation with photo array tracking
+    console.log('Lightbox:', reviewIdx, photoIdx);
+  }
+
+  function closeLightbox() {
+    document.getElementById('srw-lightbox').style.display = 'none';
+  }
+
+  function navigateLightbox(dir) {
+    lightboxIndex += dir;
+    if (lightboxIndex < 0) lightboxIndex = lightboxPhotos.length - 1;
+    if (lightboxIndex >= lightboxPhotos.length) lightboxIndex = 0;
+    document.getElementById('srw-lightbox-img').src = lightboxPhotos[lightboxIndex];
+  }
+
+  function showNotification(message, type) {
+    const notif = document.createElement('div');
+    notif.className = `srw-notification srw-notification-${type}`;
+    notif.textContent = message;
+    document.body.appendChild(notif);
+    setTimeout(() => notif.remove(), 3000);
+  }
+
+  function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = (now - date) / 1000;
+
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)} days ago`;
+
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  // Expose functions globally for onclick handlers
+  window.loadReviews = loadReviews;
+  window.filterByRating = (rating) => loadReviews(1, currentSort, rating);
+  window.markHelpful = markHelpful;
+  window.shareReview = shareReview;
+  window.openLightbox = openLightbox;
+  window.removePhoto = removePhoto;
+
+  // Initialize
+  init();
+})();
+</script>
