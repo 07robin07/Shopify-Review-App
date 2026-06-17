@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review App Admin</title>
+    <style>
+        :root { --primary: #008060; --danger: #d72c0d; --warning: #ffc453; --info: #00a0ac; --bg: #f6f6f7; --card: #fff; --text: #202223; --muted: #6d7175; --border: #c9cccf; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { background: var(--card); padding: 20px; border-bottom: 1px solid var(--border); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .header h1 { font-size: 24px; font-weight: 600; }
+        .plan-badge { padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; text-transform: uppercase; }
+        .plan-free { background: #e3f1df; color: #0c5132; }
+        .plan-starter { background: #e0f0ff; color: #004c99; }
+        .plan-growth { background: #fcebdb; color: #5c3d00; }
+        .plan-pro { background: #f1e3f8; color: #4a154b; }
+        .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 20px; background: var(--card); overflow-x: auto; }
+        .tab { padding: 14px 20px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; font-weight: 500; color: var(--muted); transition: all 0.2s; }
+        .tab:hover { color: var(--text); }
+        .tab.active { border-bottom-color: var(--primary); color: var(--primary); font-weight: 600; }
+        .card { background: var(--card); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 20px; overflow: hidden; }
+        .card-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .card-header h2 { font-size: 18px; font-weight: 600; }
+        .card-body { padding: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .stat-card { background: var(--card); padding: 24px; border-radius: 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .stat-value { font-size: 36px; font-weight: 700; color: var(--primary); }
+        .stat-label { color: var(--muted); font-size: 14px; margin-top: 8px; }
+        .stat-change { font-size: 13px; margin-top: 4px; }
+        .stat-change.up { color: var(--primary); }
+        .stat-change.down { color: var(--danger); }
+        .btn { padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: #006e52; }
+        .btn-secondary { background: #fff; border: 1px solid var(--border); color: var(--text); }
+        .btn-secondary:hover { background: var(--bg); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { background: #b91c04; }
+        .btn-sm { padding: 6px 12px; font-size: 13px; }
+        .badge { padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+        .badge-success { background: #a5e3b9; color: #0c5132; }
+        .badge-warning { background: #ffea8a; color: #5c4813; }
+        .badge-danger { background: #fed3d1; color: #8e1f0b; }
+        .badge-info { background: #b3e5f8; color: #005c91; }
+        .table { width: 100%; border-collapse: collapse; }
+        .table th, .table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+        .table th { font-weight: 600; color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .table tr:hover { background: var(--bg); }
+        .filter-bar { display: flex; gap: 12px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
+        input, select, textarea { padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; font-family: inherit; transition: border-color 0.2s; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); }
+        .search-input { flex: 1; min-width: 200px; }
+        .checkbox { width: 18px; height: 18px; cursor: pointer; }
+        .stars { color: #f5c518; font-size: 16px; letter-spacing: 1px; }
+        .review-item { border-bottom: 1px solid var(--border); padding: 20px 0; }
+        .review-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; }
+        .reviewer-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .review-body { color: #444; line-height: 1.6; margin: 8px 0; }
+        .review-footer { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 13px; margin-top: 12px; }
+        .photo-grid { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+        .photo-grid img { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; transition: transform 0.2s; }
+        .photo-grid img:hover { transform: scale(1.05); }
+        .pagination { display: flex; justify-content: center; gap: 6px; margin-top: 24px; }
+        .page-btn { min-width: 36px; height: 36px; border: 1px solid var(--border); background: var(--card); cursor: pointer; border-radius: 6px; font-size: 14px; transition: all 0.2s; }
+        .page-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .page-btn:hover:not(.active) { background: var(--bg); }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; backdrop-filter: blur(4px); }
+        .modal { background: var(--card); margin: 60px auto; max-width: 700px; border-radius: 12px; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: modalSlide 0.3s ease; }
+        @keyframes modalSlide { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-header { padding: 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { padding: 24px; }
+        .close-btn { font-size: 28px; cursor: pointer; background: none; border: none; color: var(--muted); line-height: 1; }
+        .close-btn:hover { color: var(--text); }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 14px; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; }
+        .toggle { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+        .toggle-switch { width: 44px; height: 24px; background: var(--border); border-radius: 12px; position: relative; transition: background 0.3s; }
+        .toggle-switch.active { background: var(--primary); }
+        .toggle-switch::after { content: ''; position: absolute; width: 20px; height: 20px; background: #fff; border-radius: 50%; top: 2px; left: 2px; transition: left 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .toggle-switch.active::after { left: 22px; }
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+        .empty-state svg { width: 64px; height: 64px; margin-bottom: 16px; opacity: 0.5; }
+        .loading { text-align: center; padding: 40px; color: var(--muted); }
+        .toast { position: fixed; bottom: 24px; right: 24px; background: var(--text); color: #fff; padding: 14px 24px; border-radius: 8px; font-size: 14px; z-index: 2000; animation: toastSlide 0.3s ease; display: none; }
+        @keyframes toastSlide { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .chart-container { height: 300px; margin: 20px 0; }
+        .progress-bar { height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; margin-top: 8px; }
+        .progress-fill { height: 100%; background: var(--primary); border-radius: 4px; transition: width 0.3s; }
+        .rating-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+        .rating-bar-label { width: 40px; font-size: 14px; font-weight: 500; }
+        .rating-bar-track { flex: 1; height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+        .rating-bar-fill { height: 100%; background: #f5c518; border-radius: 4px; }
+        .rating-bar-count { width: 50px; text-align: right; font-size: 13px; color: var(--muted); }
+        .plan-card { border: 2px solid var(--border); border-radius: 12px; padding: 24px; text-align: center; transition: all 0.2s; cursor: pointer; }
+        .plan-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+        .plan-card.active { border-color: var(--primary); background: #f6fbf9; }
+        .plan-card h3 { font-size: 20px; margin-bottom: 8px; }
+        .plan-price { font-size: 36px; font-weight: 700; color: var(--primary); }
+        .plan-price span { font-size: 16px; color: var(--muted); font-weight: 400; }
+        .plan-features { list-style: none; margin: 20px 0; text-align: left; }
+        .plan-features li { padding: 8px 0; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+        .plan-features li::before { content: '✓'; color: var(--primary); font-weight: 700; }
+        .plan-features li.disabled { color: var(--muted); }
+        .plan-features li.disabled::before { content: '✗'; color: var(--muted); }
+        .usage-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .usage-bar-label { width: 120px; font-size: 14px; }
+        .usage-bar-track { flex: 1; height: 24px; background: var(--bg); border-radius: 12px; overflow: hidden; position: relative; }
+        .usage-bar-fill { height: 100%; background: var(--primary); border-radius: 12px; transition: width 0.3s; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; color: #fff; font-size: 12px; font-weight: 600; }
+        .usage-bar-fill.warning { background: var(--warning); color: var(--text); }
+        .usage-bar-fill.danger { background: var(--danger); }
+        .usage-bar-text { width: 80px; text-align: right; font-size: 13px; color: var(--muted); }
+        .hidden { display: none !important; }
+        .flex { display: flex; }
+        .gap-2 { gap: 8px; }
+        .gap-3 { gap: 12px; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .mt-2 { margin-top: 8px; }
+        .mt-3 { margin-top: 12px; }
+        .mb-3 { margin-bottom: 12px; }
+        .text-sm { font-size: 13px; }
+        .text-muted { color: var(--muted); }
+        .font-semibold { font-weight: 600; }
+        .w-full { width: 100%; }
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+            .header { flex-direction: column; align-items: flex-start; }
+            .tabs { overflow-x: auto; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>📋 Review App</h1>
+            <div class="text-sm text-muted mt-2" id="shop-info"></div>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="plan-badge plan-free" id="plan-badge">Free Plan</span>
+            <button class="btn btn-primary btn-sm" onclick="showUpgradeModal()">Upgrade</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('dashboard')">📊 Dashboard</div>
+            <div class="tab" onclick="showTab('reviews')">📝 Reviews</div>
+            <div class="tab" onclick="showTab('qna')">❓ Q&A</div>
+            <div class="tab" onclick="showTab('requests')">📧 Requests</div>
+            <div class="tab" onclick="showTab('imports')">📥 Import/Export</div>
+            <div class="tab" onclick="showTab('settings')">⚙️ Settings</div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard" class="tab-content">
+            <div class="grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-total">0</div>
+                    <div class="stat-label">Total Reviews</div>
+                    <div class="stat-change up">+12% this month</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-avg">0.0</div>
+                    <div class="stat-label">Average Rating</div>
+                    <div class="stars" id="stat-stars">☆☆☆☆☆</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-pending">0</div>
+                    <div class="stat-label">Pending Approval</div>
+                    <div class="stat-change down">Needs attention</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-conversion">0%</div>
+                    <div class="stat-label">Request Conversion</div>
+                    <div class="stat-change up">Industry avg: 8%</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Rating Distribution</h2>
+                </div>
+                <div class="card-body" id="rating-distribution">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Top Products</h2>
+                </div>
+                <div class="card-body">
+                    <table class="table" id="top-products">
+                        <tr><th>Product</th><th>Reviews</th><th>Avg Rating</th><th>Conversion</th></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reviews -->
+        <div id="reviews" class="tab-content hidden">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Review Management</h2>
+                    <div class="flex gap-2">
+                        <button class="btn btn-secondary btn-sm" onclick="exportReviews()">📥 Export</button>
+                        <button class="btn btn-primary btn-sm" onclick="showImportModal()">📥 Import</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="filter-bar">
+                        <input type="text" class="search-input" id="search-input" placeholder="Search reviews, customers, products..." onkeyup="if(event.key==='Enter')loadReviews()">
+                        <select id="status-filter" onchange="loadReviews()">
+                            <option value="all">All Status</option>
+                            <option value="published">Published</option>
+                            <option value="pending">Pending</option>
+                            <option value="featured">Featured</option>
+                        </select>
+                        <select id="rating-filter" onchange="loadReviews()">
+                            <option value="all">All Ratings</option>
+                            <option value="5">5 Stars</option>
+                            <option value="4">4 Stars</option>
+                            <option value="3">3 Stars</option>
+                            <option value="2">2 Stars</option>
+                            <option value="1">1 Star</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="loadReviews()">Search</button>
+                    </div>
+
+                    <div class="flex gap-2 mb-3" id="bulk-actions" style="display:none !important">
+                        <button class="btn btn-primary btn-sm" onclick="bulkAction('publish')">Publish</button>
+                        <button class="btn btn-secondary btn-sm" onclick="bulkAction('unpublish')">Unpublish</button>
+                        <button class="btn btn-secondary btn-sm" onclick="bulkAction('feature')">Feature</button>
+                        <button class="btn btn-danger btn-sm" onclick="bulkAction('delete')">Delete</button>
+                        <span class="text-muted text-sm" id="selected-count">0 selected</span>
+                    </div>
+
+                    <div id="reviews-list"></div>
+                    <div class="pagination" id="reviews-pagination"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Q&A -->
+        <div id="qna" class="tab-content hidden">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Questions & Answers</h2>
+                    <div class="flex gap-2">
+                        <span class="text-muted text-sm">Enable Q&A in Settings to collect questions</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="qna-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Requests -->
+        <div id="requests" class="tab-content hidden">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Review Requests</h2>
+                    <div class="flex gap-2">
+                        <span class="text-muted text-sm">Automated emails sent after order fulfillment</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="grid" style="margin-bottom:20px">
+                        <div class="stat-card">
+                            <div class="stat-value" id="req-sent">0</div>
+                            <div class="stat-label">Sent</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="req-opened">0</div>
+                            <div class="stat-label">Opened</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="req-clicked">0</div>
+                            <div class="stat-label">Clicked</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="req-reviewed">0</div>
+                            <div class="stat-label">Reviewed</div>
+                        </div>
+                    </div>
+                    <div id="requests-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Import/Export -->
+        <div id="imports" class="tab-content hidden">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-header"><h2>Import Reviews</h2></div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">Import from other review apps or CSV files</p>
+                        <div class="form-group">
+                            <label>Source</label>
+                            <select id="import-source">
+                                <option value="csv">CSV File</option>
+                                <option value="judge_me">Judge.me</option>
+                                <option value="yotpo">Yotpo</option>
+                                <option value="loox">Loox</option>
+                                <option value="aliexpress">AliExpress</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Upload CSV/JSON</label>
+                            <input type="file" id="import-file" accept=".csv,.json">
+                        </div>
+                        <button class="btn btn-primary w-full" onclick="startImport()">Start Import</button>
+                        <div id="import-progress" class="mt-3 hidden">
+                            <div class="progress-bar"><div class="progress-fill" id="import-progress-bar" style="width:0%"></div></div>
+                            <div class="text-sm text-muted mt-2" id="import-status">Processing...</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><h2>Export Reviews</h2></div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">Download all reviews as CSV</p>
+                        <div class="form-group">
+                            <label>Format</label>
+                            <select>
+                                <option>CSV (Comma Separated)</option>
+                                <option>JSON</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Filter</label>
+                            <select>
+                                <option>All Reviews</option>
+                                <option>Published Only</option>
+                                <option>Pending Only</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary w-full" onclick="exportReviews()">Download Export</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h2>Import History</h2></div>
+                <div class="card-body">
+                    <table class="table" id="import-history">
+                        <tr><th>Date</th><th>Source</th><th>Status</th><th>Processed</th><th>Failed</th></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings -->
+        <div id="settings" class="tab-content hidden">
+            <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(350px, 1fr))">
+                <div class="card">
+                    <div class="card-header"><h2>General Settings</h2></div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <div class="toggle" onclick="toggleSetting('autoPublish')">
+                                <div class="toggle-switch active" id="toggle-autoPublish"></div>
+                                <label>Auto-publish reviews</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="toggle" onclick="toggleSetting('requireApproval')">
+                                <div class="toggle-switch" id="toggle-requireApproval"></div>
+                                <label>Require approval before publishing</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Review request delay (days)</label>
+                            <input type="number" id="request-delay" value="7" min="1" max="30">
+                        </div>
+                        <div class="form-group">
+                            <label>Minimum review length</label>
+                            <input type="number" id="min-length" value="10" min="5">
+                        </div>
+                        <div class="form-group">
+                            <label>Widget theme</label>
+                            <select id="widget-theme">
+                                <option value="default">Default</option>
+                                <option value="minimal">Minimal</option>
+                                <option value="cards">Cards</option>
+                                <option value="masonry">Masonry</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Star color</label>
+                            <input type="color" id="star-color" value="#f5c518">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h2>Display Options</h2></div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <div class="toggle" onclick="toggleSetting('showRatingOnProduct')">
+                                <div class="toggle-switch active" id="toggle-showRatingOnProduct"></div>
+                                <label>Show rating on product pages</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="toggle" onclick="toggleSetting('showRatingOnCollection')">
+                                <div class="toggle-switch active" id="toggle-showRatingOnCollection"></div>
+                                <label>Show rating on collection pages</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="toggle" onclick="toggleSetting('showPhotos')">
+                                <div class="toggle-switch active" id="toggle-showPhotos"></div>
+                                <label>Allow photo reviews</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Max photos per review</label>
+                            <input type="number" id="max-photos" value="5" min="1" max="10">
+                        </div>
+                        <div class="form-group">
+                            <div class="toggle" onclick="toggleSetting('enableRichSnippets')">
+                                <div class="toggle-switch active" id="toggle-enableRichSnippets"></div>
+                                <label>Enable Google rich snippets (SEO)</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h2>Review Form</h2></div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <div class="toggle" onclick="toggleSetting('requireEmail')">
+                                <div class="toggle-switch active" id="toggle-requireEmail"></div>
+                                <label>Require email</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="toggle" onclick="toggleSetting('requireName')">
+                                <div class="toggle-switch active" id="toggle-requireName"></div>
+                                <label>Require name</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="toggle" onclick="toggleSetting('allowAnonymous')">
+                                <div class="toggle-switch" id="toggle-allowAnonymous"></div>
+                                <label>Allow anonymous reviews</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Widget position</label>
+                            <select id="widget-position">
+                                <option value="below_product">Below product description</option>
+                                <option value="above_footer">Above footer</option>
+                                <option value="tab">In product tabs</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h2>Incentives & Coupons</h2></div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <div class="toggle" onclick="toggleSetting('enableCoupons')">
+                                <div class="toggle-switch" id="toggle-enableCoupons"></div>
+                                <label>Enable review coupons</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Coupon code</label>
+                            <input type="text" id="coupon-code" placeholder="REVIEW10">
+                        </div>
+                        <div class="form-group">
+                            <label>Discount percentage</label>
+                            <input type="number" id="coupon-discount" value="10" min="1" max="100">
+                        </div>
+                        <div class="form-group">
+                            <label>Minimum rating for coupon</label>
+                            <input type="number" id="coupon-min-rating" value="4" min="1" max="5">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h2>Q&A</h2></div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <div class="toggle" onclick="toggleSetting('enableQandA')">
+                                <div class="toggle-switch" id="toggle-enableQandA"></div>
+                                <label>Enable Questions & Answers</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="toggle" onclick="toggleSetting('qnaRequireEmail')">
+                                <div class="toggle-switch active" id="toggle-qnaRequireEmail"></div>
+                                <label>Require email for questions</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h2>Moderation</h2></div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <div class="toggle" onclick="toggleSetting('profanityFilter')">
+                                <div class="toggle-switch active" id="toggle-profanityFilter"></div>
+                                <label>Profanity filter</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Blacklisted words (comma separated)</label>
+                            <textarea id="auto-blacklist" rows="3" placeholder="spam, fake, scam..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-2" style="margin-top:20px">
+                <button class="btn btn-primary" onclick="saveSettings()">Save All Settings</button>
+                <button class="btn btn-secondary" onclick="resetSettings()">Reset to Default</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div class="modal-overlay" id="review-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Review Details</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-content"></div>
+        </div>
+    </div>
+
+    <!-- Upgrade Modal -->
+    <div class="modal-overlay" id="upgrade-modal">
+        <div class="modal" style="max-width:900px">
+            <div class="modal-header">
+                <h3>Choose Your Plan</h3>
+                <button class="close-btn" onclick="closeUpgradeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))">
+                    <div class="plan-card" id="plan-free" onclick="selectPlan('free')">
+                        <h3>Free</h3>
+                        <div class="plan-price">$0<span>/mo</span></div>
+                        <ul class="plan-features">
+                            <li>50 review requests/mo</li>
+                            <li>100 reviews</li>
+                            <li>Text reviews only</li>
+                            <li class="disabled">Photo reviews</li>
+                            <li class="disabled">Q&A</li>
+                            <li class="disabled">Imports</li>
+                            <li class="disabled">Analytics</li>
+                            <li>Community support</li>
+                        </ul>
+                        <button class="btn btn-secondary w-full">Current Plan</button>
+                    </div>
+                    <div class="plan-card" id="plan-starter" onclick="selectPlan('starter')">
+                        <h3>Starter</h3>
+                        <div class="plan-price">$9.99<span>/mo</span></div>
+                        <ul class="plan-features">
+                            <li>500 review requests/mo</li>
+                            <li>1,000 reviews</li>
+                            <li>Photo reviews</li>
+                            <li>Q&A enabled</li>
+                            <li>CSV imports</li>
+                            <li>Basic analytics</li>
+                            <li class="disabled">Video reviews</li>
+                            <li>Email support</li>
+                        </ul>
+                        <button class="btn btn-primary w-full">Upgrade</button>
+                    </div>
+                    <div class="plan-card" id="plan-growth" onclick="selectPlan('growth')">
+                        <h3>Growth</h3>
+                        <div class="plan-price">$29.99<span>/mo</span></div>
+                        <ul class="plan-features">
+                            <li>2,000 review requests/mo</li>
+                            <li>5,000 reviews</li>
+                            <li>Photo & video reviews</li>
+                            <li>Q&A enabled</li>
+                            <li>All imports</li>
+                            <li>Advanced analytics</li>
+                            <li>Priority support</li>
+                        </ul>
+                        <button class="btn btn-primary w-full">Upgrade</button>
+                    </div>
+                    <div class="plan-card" id="plan-pro" onclick="selectPlan('pro')">
+                        <h3>Pro</h3>
+                        <div class="plan-price">$79.99<span>/mo</span></div>
+                        <ul class="plan-features">
+                            <li>10,000 review requests/mo</li>
+                            <li>Unlimited reviews</li>
+                            <li>Photo & video reviews</li>
+                            <li>Q&A enabled</li>
+                            <li>All imports + API</li>
+                            <li>Full analytics</li>
+                            <li>Dedicated support</li>
+                        </ul>
+                        <button class="btn btn-primary w-full">Upgrade</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div class="modal-overlay" id="import-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Import Reviews</h3>
+                <button class="close-btn" onclick="closeImportModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Import Source</label>
+                    <select id="import-source-modal">
+                        <option value="csv">CSV File</option>
+                        <option value="judge_me">Judge.me</option>
+                        <option value="yotpo">Yotpo</option>
+                        <option value="loox">Loox</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Upload File</label>
+                    <input type="file" id="import-file-modal" accept=".csv,.json">
+                </div>
+                <button class="btn btn-primary w-full" onclick="startImport()">Start Import</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API_URL = window.location.origin + '/api';
+        let currentShop = new URLSearchParams(window.location.search).get('shop') || '';
+        let currentPage = 1;
+        let selectedReviews = [];
+        let currentReview = null;
+        let currentPlan = 'free';
+        let settings = {};
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('shop-info').textContent = currentShop;
+            loadSubscription();
+            loadDashboard();
+        });
+
+        function showTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(tab).classList.remove('hidden');
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (tab === 'dashboard') loadDashboard();
+            if (tab === 'reviews') loadReviews();
+            if (tab === 'qna') loadQnA();
+            if (tab === 'requests') loadRequests();
+            if (tab === 'imports') loadImports();
+            if (tab === 'settings') loadSettings();
+        }
+
+        async function loadSubscription() {
+            try {
+                const res = await fetch(`${API_URL}/billing/subscription?shop=${currentShop}`);
+                const data = await res.json();
+                currentPlan = data.plan || 'free';
+
+                const badge = document.getElementById('plan-badge');
+                badge.textContent = `${data.plan || 'Free'} Plan`;
+                badge.className = `plan-badge plan-${data.plan || 'free'}`;
+
+                // Update plan cards
+                document.querySelectorAll('.plan-card').forEach(card => {
+                    card.classList.remove('active');
+                });
+                const activeCard = document.getElementById(`plan-${currentPlan}`);
+                if (activeCard) {
+                    activeCard.classList.add('active');
+                    activeCard.querySelector('button').textContent = 'Current Plan';
+                    activeCard.querySelector('button').className = 'btn btn-secondary w-full';
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadDashboard() {
+            try {
+                const res = await fetch(`${API_URL}/analytics/dashboard?shop=${currentShop}&period=30`);
+                const data = await res.json();
+
+                document.getElementById('stat-total').textContent = data.overview?.totalReviews || 0;
+                document.getElementById('stat-avg').textContent = data.overview?.averageRating || '0.0';
+                document.getElementById('stat-stars').textContent = '★'.repeat(Math.round(data.overview?.averageRating || 0)) + '☆'.repeat(5 - Math.round(data.overview?.averageRating || 0));
+                document.getElementById('stat-pending').textContent = data.overview?.pendingReviews || 0;
+                document.getElementById('stat-conversion').textContent = data.overview?.conversionRate || '0%';
+
+                // Rating distribution
+                const dist = data.ratingDistribution || {};
+                const total = Object.values(dist).reduce((a, b) => a + b, 0) || 1;
+                document.getElementById('rating-distribution').innerHTML = [5,4,3,2,1].map(r => {
+                    const count = dist[r] || 0;
+                    const pct = (count / total * 100).toFixed(1);
+                    return `
+                        <div class="rating-bar">
+                            <div class="rating-bar-label">${r} ★</div>
+                            <div class="rating-bar-track"><div class="rating-bar-fill" style="width:${pct}%"></div></div>
+                            <div class="rating-bar-count">${count}</div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Top products
+                const topProducts = data.topProducts || [];
+                document.getElementById('top-products').innerHTML = `
+                    <tr><th>Product</th><th>Reviews</th><th>Avg Rating</th><th>Conversion</th></tr>
+                    ${topProducts.map(p => `
+                        <tr>
+                            <td>${p.productTitle}</td>
+                            <td>${p.reviewCount}</td>
+                            <td><span class="stars">${'★'.repeat(Math.round(p.averageRating))}${'☆'.repeat(5-Math.round(p.averageRating))}</span> ${p.averageRating}</td>
+                            <td>-</td>
+                        </tr>
+                    `).join('')}
+                `;
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadReviews() {
+            const status = document.getElementById('status-filter').value;
+            const rating = document.getElementById('rating-filter').value;
+            const search = document.getElementById('search-input').value;
+
+            try {
+                const res = await fetch(`${API_URL}/reviews/admin/all?shop=${currentShop}&status=${status}&page=${currentPage}&search=${search}`);
+                const data = await res.json();
+
+                const list = document.getElementById('reviews-list');
+                if (!data.reviews?.length) {
+                    list.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg><h3>No reviews found</h3><p>Reviews will appear here once customers start submitting them.</p></div>';
+                    return;
+                }
+
+                list.innerHTML = data.reviews.map(review => `
+                    <div class="review-item">
+                        <div class="review-header">
+                            <div class="reviewer-info">
+                                <input type="checkbox" class="checkbox" onchange="toggleSelect('${review.id}')" ${selectedReviews.includes(review.id) ? 'checked' : ''}>
+                                <div>
+                                    <strong>${review.customerName}</strong>
+                                    ${review.verified ? '<span class="badge badge-success">Verified</span>' : ''}
+                                    ${review.featured ? '<span class="badge badge-info">Featured</span>' : ''}
+                                    <div class="stars">${'★'.repeat(review.rating)}${'☆'.repeat(5-review.rating)}</div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <span class="badge ${review.published ? 'badge-success' : 'badge-warning'}">${review.published ? 'Published' : 'Pending'}</span>
+                                <button class="btn btn-secondary btn-sm" onclick="openReview('${review.id}')">View</button>
+                            </div>
+                        </div>
+                        <div style="margin-left:32px">
+                            <div class="font-semibold">${review.productTitle}</div>
+                            <div class="review-body">${review.body.substring(0, 150)}${review.body.length > 150 ? '...' : ''}</div>
+                            ${review.photos?.length ? `<div class="photo-grid">${review.photos.map(p => `<img src="${p}" alt="" onclick="window.open('${p}')">`).join('')}</div>` : ''}
+                            <div class="review-footer">
+                                <span>${new Date(review.createdAt).toLocaleDateString()}</span>
+                                <span>👍 ${review.helpfulCount} helpful</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                const pages = data.pagination?.pages || 1;
+                document.getElementById('reviews-pagination').innerHTML = Array.from({length: pages}, (_, i) => 
+                    `<button class="page-btn ${i+1 === currentPage ? 'active' : ''}" onclick="currentPage=${i+1};loadReviews()">${i+1}</button>`
+                ).join('');
+
+                updateBulkActions();
+            } catch (e) { console.error(e); }
+        }
+
+        function toggleSelect(id) {
+            if (selectedReviews.includes(id)) {
+                selectedReviews = selectedReviews.filter(r => r !== id);
+            } else {
+                selectedReviews.push(id);
+            }
+            updateBulkActions();
+        }
+
+        function updateBulkActions() {
+            const el = document.getElementById('bulk-actions');
+            const count = document.getElementById('selected-count');
+            if (selectedReviews.length > 0) {
+                el.style.display = 'flex !important';
+                count.textContent = `${selectedReviews.length} selected`;
+            } else {
+                el.style.display = 'none !important';
+            }
+        }
+
+        async function bulkAction(action) {
+            if (!confirm(`Are you sure you want to ${action} ${selectedReviews.length} reviews?`)) return;
+
+            await fetch(`${API_URL}/reviews/admin/bulk`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: selectedReviews, action })
+            });
+
+            showToast(`${selectedReviews.length} reviews ${action}ed`);
+            selectedReviews = [];
+            loadReviews();
+        }
+
+        async function openReview(id) {
+            try {
+                const res = await fetch(`${API_URL}/reviews/admin/all?shop=${currentShop}&limit=1000`);
+                const data = await res.json();
+                currentReview = data.reviews.find(r => r.id === id);
+
+                if (!currentReview) return;
+
+                document.getElementById('modal-content').innerHTML = `
+                    <div class="mb-3">
+                        <div class="flex justify-between items-center">
+                            <strong>${currentReview.customerName}</strong>
+                            <div class="stars">${'★'.repeat(currentReview.rating)}${'☆'.repeat(5-currentReview.rating)}</div>
+                        </div>
+                        <div class="text-muted text-sm">${currentReview.productTitle}</div>
+                    </div>
+                    <div class="mb-3">
+                        <h4>${currentReview.title || 'No title'}</h4>
+                        <p>${currentReview.body}</p>
+                        ${currentReview.photos?.length ? `<div class="photo-grid">${currentReview.photos.map(p => `<img src="${p}" alt="">`).join('')}</div>` : ''}
+                    </div>
+                    <div class="form-group">
+                        <label>Your Reply</label>
+                        <textarea id="reply-text" rows="4">${currentReview.reply || ''}</textarea>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="btn btn-primary" onclick="saveReply()">Save Reply</button>
+                        <button class="btn btn-secondary" onclick="togglePublish('${currentReview.id}')">${currentReview.published ? 'Unpublish' : 'Publish'}</button>
+                        <button class="btn btn-secondary" onclick="toggleFeature('${currentReview.id}')">${currentReview.featured ? 'Unfeature' : 'Feature'}</button>
+                        <button class="btn btn-danger" onclick="deleteReview('${currentReview.id}')">Delete</button>
+                    </div>
+                `;
+
+                document.getElementById('review-modal').style.display = 'block';
+            } catch (e) { console.error(e); }
+        }
+
+        async function saveReply() {
+            const reply = document.getElementById('reply-text').value;
+            await fetch(`${API_URL}/reviews/admin/${currentReview.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reply })
+            });
+            closeModal();
+            showToast('Reply saved');
+            loadReviews();
+        }
+
+        async function togglePublish(id) {
+            const review = currentReview;
+            await fetch(`${API_URL}/reviews/admin/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ published: !review.published })
+            });
+            closeModal();
+            showToast(review.published ? 'Review unpublished' : 'Review published');
+            loadReviews();
+        }
+
+        async function toggleFeature(id) {
+            const review = currentReview;
+            await fetch(`${API_URL}/reviews/admin/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ featured: !review.featured })
+            });
+            closeModal();
+            showToast(review.featured ? 'Review unfeatured' : 'Review featured');
+            loadReviews();
+        }
+
+        async function deleteReview(id) {
+            if (!confirm('Delete this review permanently?')) return;
+            await fetch(`${API_URL}/reviews/admin/${id}`, { method: 'DELETE' });
+            closeModal();
+            showToast('Review deleted');
+            loadReviews();
+        }
+
+        function closeModal() {
+            document.getElementById('review-modal').style.display = 'none';
+        }
+
+        async function loadQnA() {
+            try {
+                const res = await fetch(`${API_URL}/qna/admin/all?shop=${currentShop}`);
+                const data = await res.json();
+
+                const list = document.getElementById('qna-list');
+                if (!data.questions?.length) {
+                    list.innerHTML = '<div class="empty-state"><h3>No questions yet</h3><p>Enable Q&A in settings to start collecting questions.</p></div>';
+                    return;
+                }
+
+                list.innerHTML = data.questions.map(q => `
+                    <div class="review-item">
+                        <div class="review-header">
+                            <div><strong>${q.customerName}</strong> <span class="text-muted">asked about ${q.productTitle}</span></div>
+                            <span class="badge ${q.status === 'answered' ? 'badge-success' : 'badge-warning'}">${q.status}</span>
+                        </div>
+                        <div class="review-body">${q.question}</div>
+                        ${q.answer ? `<div class="merchant-reply"><strong>Answer:</strong> ${q.answer}</div>` : `
+                            <div class="form-group mt-3">
+                                <textarea id="answer-${q.id}" rows="2" placeholder="Write your answer..."></textarea>
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="answerQuestion('${q.id}')">Answer</button>
+                        `}
+                    </div>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function answerQuestion(id) {
+            const answer = document.getElementById(`answer-${id}`).value;
+            await fetch(`${API_URL}/qna/admin/${id}/answer`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ answer, answeredBy: 'Merchant' })
+            });
+            showToast('Answer posted');
+            loadQnA();
+        }
+
+        async function loadRequests() {
+            try {
+                const res = await fetch(`${API_URL}/settings/requests?shop=${currentShop}`);
+                const data = await res.json();
+
+                const sent = data.filter(r => r.status !== 'pending').length;
+                const opened = data.filter(r => r.openedAt).length;
+                const clicked = data.filter(r => r.clickedAt).length;
+                const reviewed = data.filter(r => r.status === 'reviewed').length;
+
+                document.getElementById('req-sent').textContent = sent;
+                document.getElementById('req-opened').textContent = opened;
+                document.getElementById('req-clicked').textContent = clicked;
+                document.getElementById('req-reviewed').textContent = reviewed;
+
+                const list = document.getElementById('requests-list');
+                if (!data?.length) {
+                    list.innerHTML = '<div class="empty-state">No requests yet</div>';
+                    return;
+                }
+
+                list.innerHTML = data.slice(0, 20).map(req => `
+                    <div class="review-item">
+                        <div class="review-header">
+                            <div><strong>${req.customerName}</strong> <span class="text-muted">${req.customerEmail}</span></div>
+                            <span class="badge ${req.status === 'reviewed' ? 'badge-success' : req.status === 'sent' ? 'badge-info' : 'badge-warning'}">${req.status}</span>
+                        </div>
+                        <div class="text-muted text-sm">Order #${req.orderId} | ${new Date(req.createdAt).toLocaleDateString()}</div>
+                    </div>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadImports() {
+            try {
+                const res = await fetch(`${API_URL}/imports/all?shop=${currentShop}`);
+                const data = await res.json();
+
+                const table = document.getElementById('import-history');
+                table.innerHTML = `
+                    <tr><th>Date</th><th>Source</th><th>Status</th><th>Processed</th><th>Failed</th></tr>
+                    ${(data.jobs || []).map(job => `
+                        <tr>
+                            <td>${new Date(job.createdAt).toLocaleDateString()}</td>
+                            <td>${job.source}</td>
+                            <td><span class="badge ${job.status === 'completed' ? 'badge-success' : job.status === 'failed' ? 'badge-danger' : 'badge-warning'}">${job.status}</span></td>
+                            <td>${job.processed}/${job.totalRows}</td>
+                            <td>${job.failed}</td>
+                        </tr>
+                    `).join('')}
+                `;
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadSettings() {
+            try {
+                const res = await fetch(`${API_URL}/settings?shop=${currentShop}`);
+                settings = await res.json();
+
+                // Update all toggles and inputs
+                Object.keys(settings).forEach(key => {
+                    const toggle = document.getElementById(`toggle-${key}`);
+                    if (toggle) toggle.classList.toggle('active', settings[key]);
+
+                    const input = document.getElementById(key.replace(/[A-Z]/g, m => '-' + m.toLowerCase()));
+                    if (input && !toggle) input.value = settings[key] || '';
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        function toggleSetting(key) {
+            const toggle = document.getElementById(`toggle-${key}`);
+            toggle.classList.toggle('active');
+            settings[key] = toggle.classList.contains('active');
+        }
+
+        async function saveSettings() {
+            // Collect all settings
+            const newSettings = { ...settings };
+
+            // Text inputs
+            ['request-delay', 'min-length', 'widget-theme', 'star-color', 'max-photos', 'widget-position', 'coupon-code', 'coupon-discount', 'coupon-min-rating', 'auto-blacklist'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    const key = id.replace(/-([a-z])/g, m => m[1].toUpperCase());
+                    newSettings[key] = el.type === 'checkbox' ? el.checked : el.value;
+                }
+            });
+
+            await fetch(`${API_URL}/settings?shop=${currentShop}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newSettings)
+            });
+
+            showToast('Settings saved successfully');
+        }
+
+        function resetSettings() {
+            if (!confirm('Reset all settings to default?')) return;
+            loadSettings();
+            showToast('Settings reset');
+        }
+
+        function showUpgradeModal() {
+            document.getElementById('upgrade-modal').style.display = 'block';
+        }
+
+        function closeUpgradeModal() {
+            document.getElementById('upgrade-modal').style.display = 'none';
+        }
+
+        function selectPlan(plan) {
+            if (plan === currentPlan) return;
+
+            fetch(`${API_URL}/billing/subscribe`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ shop: currentShop, plan })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.billingUrl) {
+                    window.location.href = data.billingUrl;
+                } else {
+                    showToast(`Upgraded to ${plan} plan!`);
+                    loadSubscription();
+                    closeUpgradeModal();
+                }
+            });
+        }
+
+        function showImportModal() {
+            document.getElementById('import-modal').style.display = 'block';
+        }
+
+        function closeImportModal() {
+            document.getElementById('import-modal').style.display = 'none';
+        }
+
+        async function startImport() {
+            const source = document.getElementById('import-source-modal').value;
+            const file = document.getElementById('import-file-modal').files[0];
+
+            if (!file) {
+                showToast('Please select a file');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const content = e.target.result;
+                let data = [];
+
+                if (file.name.endsWith('.json')) {
+                    data = JSON.parse(content);
+                } else {
+                    // Simple CSV parsing
+                    const lines = content.split('\n');
+                    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                    data = lines.slice(1).filter(l => l.trim()).map(line => {
+                        const obj = {};
+                        const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+                        headers.forEach((h, i) => obj[h] = values[i]);
+                        return obj;
+                    });
+                }
+
+                const res = await fetch(`${API_URL}/imports/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ shop: currentShop, source, data })
+                });
+
+                const result = await res.json();
+                if (result.error) {
+                    showToast(result.error);
+                } else {
+                    showToast('Import started! Check Import History for progress.');
+                    closeImportModal();
+                    loadImports();
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function exportReviews() {
+            window.open(`${API_URL}/imports/export?shop=${currentShop}`, '_blank');
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', 3000);
+        }
+
+        // Close modals on outside click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) overlay.style.display = 'none';
+            });
+        });
+    </script>
+</body>
+</html>

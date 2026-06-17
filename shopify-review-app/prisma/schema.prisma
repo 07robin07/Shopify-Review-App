@@ -1,0 +1,311 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id            String   @id
+  shop          String
+  state         String
+  isOnline      Boolean  @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean  @default(false)
+  locale        String?
+  collaborator  Boolean  @default(false)
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  reviews       Review[]
+  settings      StoreSettings?
+  subscriptions Subscription?
+  questions     Question[]
+  imports       ImportJob[]
+}
+
+model Subscription {
+  id          String   @id @default(cuid())
+  shop        String   @unique
+  sessionId   String   @unique
+  session     Session  @relation(fields: [sessionId], references: [id])
+  plan        String   @default("free") // free, starter, growth, pro
+  status      String   @default("active") // active, cancelled, frozen
+  chargeId    String?
+  startedAt   DateTime @default(now())
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model StoreSettings {
+  id                 String   @id @default(cuid())
+  shop               String   @unique
+  sessionId          String   @unique
+  session            Session  @relation(fields: [sessionId], references: [id])
+
+  // General
+  autoPublish        Boolean  @default(true)
+  reviewRequestDelay Int      @default(7)
+  emailTemplate      String?
+  widgetTheme        String   @default("default")
+  starColor          String   @default("#f5c518")
+  showPhotos         Boolean  @default(true)
+  minReviewLength    Int      @default(10)
+
+  // Display
+  showRatingOnCollection Boolean @default(true)
+  showRatingOnProduct    Boolean @default(true)
+  reviewsPerPage         Int      @default(10)
+  showSortOptions        Boolean  @default(true)
+  showFilterOptions      Boolean  @default(true)
+
+  // Incentives
+  enableCoupons      Boolean  @default(false)
+  couponCode         String?
+  couponDiscount     Int?
+  couponMinRating    Int      @default(4)
+
+  // SEO & Rich Snippets
+  enableRichSnippets Boolean  @default(true)
+  aggregateRating    Boolean  @default(true)
+
+  // Widget Customization
+  widgetPosition     String   @default("below_product")
+  widgetWidth        String   @default("full")
+  fontFamily         String   @default("inherit")
+  customCSS          String?
+
+  // Review Form
+  requireEmail       Boolean  @default(true)
+  requireName        Boolean  @default(true)
+  allowAnonymous     Boolean  @default(false)
+  maxPhotos          Int      @default(5)
+  maxPhotoSize       Int      @default(5) // MB
+
+  // Moderation
+  profanityFilter    Boolean  @default(true)
+  autoBlacklist      String[] // array of blacklisted words
+  requireApproval    Boolean  @default(false)
+
+  // Notifications
+  notifyNewReview    Boolean  @default(true)
+  notifyReply        Boolean  @default(true)
+  adminEmail         String?
+
+  // Q&A
+  enableQandA        Boolean  @default(false)
+  qnaRequireEmail    Boolean  @default(true)
+
+  // Social Sharing
+  enableSocialShare  Boolean  @default(false)
+  sharePlatforms     String[] @default(["facebook", "twitter"])
+
+  // Import/Export
+  lastImportAt       DateTime?
+  lastExportAt       DateTime?
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Review {
+  id              String   @id @default(cuid())
+  shop            String
+  sessionId       String
+  session         Session  @relation(fields: [sessionId], references: [id])
+  productId       String
+  productTitle    String
+  productHandle   String?
+  productImage    String?
+  variantId       String?
+
+  // Reviewer
+  customerName    String
+  customerEmail   String
+  customerId      String?
+  isVerified      Boolean  @default(false)
+
+  // Content
+  rating          Int      @default(5)
+  title           String?
+  body            String
+  photos          String[]
+  videos          String[]
+
+  // Attributes (size, fit, etc.)
+  attributes      Json?    // { "fit": "true_to_size", "quality": 5 }
+
+  // Engagement
+  helpfulCount    Int      @default(0)
+  notHelpfulCount Int      @default(0)
+  viewedCount     Int      @default(0)
+
+  // Status
+  published       Boolean  @default(false)
+  featured        Boolean  @default(false)
+  pinned          Boolean  @default(false)
+  status          String   @default("pending") // pending, approved, rejected, spam
+
+  // Reply
+  reply           String?
+  replyDate       DateTime?
+  replyBy         String?
+
+  // Source
+  source          String   @default("direct") // direct, import, email, sms
+  ipAddress       String?
+
+  // Order
+  orderId         String?
+  orderDate       DateTime?
+
+  // Social
+  sharedOn        String[]
+
+  // SEO
+  seoTitle        String?
+  seoDescription  String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  helpfulVotes    HelpfulVote[]
+
+  @@index([shop, productId])
+  @@index([shop, published, status])
+  @@index([customerEmail])
+  @@index([createdAt])
+  @@index([rating])
+}
+
+model HelpfulVote {
+  id        String   @id @default(cuid())
+  reviewId  String
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  ipAddress String
+  isHelpful Boolean
+  createdAt DateTime @default(now())
+
+  @@unique([reviewId, ipAddress])
+}
+
+model Question {
+  id          String   @id @default(cuid())
+  shop        String
+  sessionId   String
+  session     Session  @relation(fields: [sessionId], references: [id])
+  productId   String
+  productTitle String
+
+  // Asker
+  customerName  String
+  customerEmail String
+
+  // Content
+  question      String
+  answer        String?
+  answeredBy    String?
+  answerDate    DateTime?
+
+  // Status
+  status        String   @default("pending") // pending, answered, rejected
+
+  // Engagement
+  votes         Int      @default(0)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([shop, productId])
+}
+
+model ReviewRequest {
+  id            String   @id @default(cuid())
+  shop          String
+  orderId       String   @unique
+  customerName  String
+  customerEmail String
+  productIds    String[]
+  productTitles String[]
+
+  // Tracking
+  sentAt        DateTime?
+  openedAt      DateTime?
+  clickedAt     DateTime?
+  reviewedAt    DateTime?
+  bouncedAt     DateTime?
+
+  // Status
+  status        String   @default("pending") // pending, sent, opened, clicked, reviewed, bounced, unsubscribed
+  sendCount     Int      @default(0)
+
+  // Reminders
+  reminderSent  Boolean  @default(false)
+  reminderAt    DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([shop, status])
+  @@index([customerEmail])
+}
+
+model ImportJob {
+  id          String   @id @default(cuid())
+  shop        String
+  sessionId   String
+  session     Session  @relation(fields: [sessionId], references: [id])
+  source      String   // judge_me, yotpo, loox, csv, aliexpress
+  status      String   @default("pending") // pending, processing, completed, failed
+  totalRows   Int      @default(0)
+  processed   Int      @default(0)
+  failed      Int      @default(0)
+  fileUrl     String?
+  errorLog    String?
+  createdAt   DateTime @default(now())
+  completedAt DateTime?
+}
+
+model Coupon {
+  id          String   @id @default(cuid())
+  shop        String
+  code        String
+  discount    Int      // percentage
+  minRating   Int      @default(4)
+  maxUses     Int      @default(100)
+  usedCount   Int      @default(0)
+  active      Boolean  @default(true)
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  @@unique([shop, code])
+}
+
+model Analytics {
+  id              String   @id @default(cuid())
+  shop            String
+  date            DateTime @default(now())
+
+  // Metrics
+  reviewsCollected  Int      @default(0)
+  reviewsPublished  Int      @default(0)
+  avgRating         Float    @default(0)
+  requestsSent      Int      @default(0)
+  requestsOpened    Int      @default(0)
+  requestsClicked   Int      @default(0)
+  conversionRate    Float    @default(0)
+
+  // Revenue impact
+  revenueAttributed Float    @default(0)
+
+  @@unique([shop, date])
+  @@index([shop, date])
+}
