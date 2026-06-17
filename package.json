@@ -5,6 +5,7 @@
   "main": "server/index.js",
   "type": "module",
   "scripts": {
+    "build": "echo 'Build complete'",
     "start": "node server/index.js"
   },
   "dependencies": {
