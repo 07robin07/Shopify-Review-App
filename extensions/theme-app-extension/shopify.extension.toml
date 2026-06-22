@@ -1,0 +1,4 @@
+type = "theme_app_extension"
+name = "The Review widget"
+handle = "the-review-widget"
+uid = "4bb5f635-e82e-6d17-9a34-bb1ae6b1ee6e1ca9aec0"
