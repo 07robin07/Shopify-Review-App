@@ -223,7 +223,7 @@
 
 <script>
 (function() {
-  const API_URL = window.location.protocol + '//' + window.location.host + '/api';
+  const API_URL = 'https://midnightblue-hornet-725465.hostingersite.com';
   const container = document.getElementById('shopify-reviews-widget');
   const productId = container.dataset.productId;
   const productTitle = container.dataset.productTitle;
@@ -256,7 +256,7 @@
     list.innerHTML = '<div class="srw-loading"><div class="srw-spinner"></div><p>Loading reviews...</p></div>';
 
     try {
-      const url = `${API_URL}/reviews/product/${productId}?shop=${shop}&page=${currentPage}&sort=${currentSort}&limit=10`;
+      const url = `${API_URL}/api/reviews/product/${productId}?shop=${shop}&page=${currentPage}&sort=${currentSort}&limit=10`;
       const res = await fetch(url);
       const data = await res.json();
 
@@ -410,7 +410,7 @@
 
   async function loadQnA() {
     try {
-      const res = await fetch(`${API_URL}/qna/product/${productId}?shop=${shop}`);
+      const res = await fetch(`${API_URL}/api/qna/product/${productId}?shop=${shop}`);
       const data = await res.json();
 
       if (data.questions && data.questions.length > 0) {
@@ -596,7 +596,7 @@
     };
 
     try {
-      const res = await fetch(`${API_URL}/reviews/submit`, {
+      const res = await fetch(`${API_URL}/api/reviews/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(reviewData)
@@ -633,7 +633,7 @@
     };
 
     try {
-      const res = await fetch(`${API_URL}/qna/ask`, {
+      const res = await fetch(`${API_URL}/api/qna/ask`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(questionData)
@@ -652,7 +652,7 @@
 
   async function markHelpful(reviewId, isHelpful, btn) {
     try {
-      const res = await fetch(`${API_URL}/reviews/${reviewId}/helpful`, {
+      const res = await fetch(`${API_URL}/api/reviews/${reviewId}/helpful`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: isHelpful ? 'increment' : 'decrement' })
