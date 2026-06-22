@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# SQLite databases (all locations)
+server/reviews.db
+database/reviews.db
+*.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build output
+dist/
+build/
+
+# Backup files
+server/index-*.js
