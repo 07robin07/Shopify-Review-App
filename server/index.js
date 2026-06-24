@@ -149,6 +149,23 @@ function runRun(sql, params = []) {
 
 // ==================== OAUTH ROUTES ====================
 
+// Store OAuth state in database (bulletproof — no cookies needed)
+async function storeOAuthState(state, shop) {
+  const now = new Date().toISOString();
+  // Clean up old states (> 10 min old)
+  await runRun(`DELETE FROM sessions WHERE state IS NOT NULL AND createdAt < datetime('now', '-10 minutes')`);
+  // Store new state
+  await runRun(
+    `INSERT OR REPLACE INTO sessions (id, shop, state, createdAt) VALUES (?, ?, ?, ?)`,
+    [state, shop, state, now]
+  );
+}
+
+async function verifyOAuthState(state) {
+  const rows = await runQuery(`SELECT * FROM sessions WHERE id = ? AND state = ?`, [state, state]);
+  return rows.length > 0;
+}
+
 // Step 1: Start OAuth - redirect to Shopify authorization
 app.get('/auth', async (req, res) => {
   try {
@@ -161,10 +178,10 @@ app.get('/auth', async (req, res) => {
     const shopDomain = `${sanitizedShop}.myshopify.com`;
 
     const state = generateNonce();
-    req.session.oauthState = state;
-    req.session.shop = shopDomain;
+    
+    // Store state in database (not session cookie!)
+    await storeOAuthState(state, shopDomain);
 
-    // Use base URL as redirect (what's whitelisted in Shopify)
     const redirectUri = `${APP_URL}/`;
     const authUrl = `https://${shopDomain}/admin/oauth/authorize?client_id=${SHOPIFY_API_KEY}&scope=${SCOPES}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
 
@@ -187,9 +204,15 @@ app.get('/', async (req, res) => {
   
   // Handle OAuth callback
   try {
-    if (state !== req.session.oauthState) {
-      return res.status(403).send('Invalid state parameter');
+    // Verify state from database (not session cookie!)
+    const stateValid = await verifyOAuthState(state);
+    if (!stateValid) {
+      console.error(`[OAuth] Invalid state: ${state}`);
+      return res.status(403).send('Invalid state parameter. Please try installing again.');
     }
+
+    // Delete used state (one-time use)
+    await runRun(`DELETE FROM sessions WHERE id = ?`, [state]);
 
     if (!code || !shop) {
       return res.status(400).send('Missing authorization code or shop');
