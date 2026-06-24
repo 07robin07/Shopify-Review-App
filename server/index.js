@@ -94,13 +94,17 @@ db.serialize(() => {
 
 const app = express();
 
+// Trust proxy (required for secure cookies behind Hostinger's reverse proxy)
+app.set('trust proxy', 1);
+
 // Session middleware
 app.use(session({
-  secret: 'put-any-random-32-character-string-here-for-testing',
+  secret: process.env.SESSION_SECRET || 'default-secret-for-dev',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
+    sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000
   }
 }));
